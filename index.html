@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <script class="App">
+        function App() {
+
+  const route = createBrowserRouter([
+    {
+      path:"/",
+      element: <User/>,
+    },
+    {
+      path:"/add",
+      element: <Add/>,
+    },
+    {
+      path:"/edit/:id",
+      element: <Edit/>,
+    },
+  ])
+
+  return (
+    <div className="App">
+       <RouterProvider router={route}></RouterProvider>
+    </div>
+  );
+}
+    </script>
+
+    <script class="index">
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+    <Toaster/>
+  </React.StrictMode>
+);
+    </script>
+    <script class="Add">
+        import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom';
+import axios from "axios";
+import "./add.css";
+import toast from 'react-hot-toast';
+
+const Add = () => {
+
+  const users = {
+    fname:"",
+    lname:"",
+    email:"",
+    password:""
+  }
+
+  const [user, setUser] = useState(users);
+  const navigate = useNavigate();
+
+  const inputHandler = (e) =>{
+      const {name, value} = e.target;
+      setUser({...user, [name]:value});
+  }
+
+  const submitForm = async(e) =>{
+    e.preventDefault();
+    await axios.post("http://localhost:8000/api/create", user)
+    .then((response)=>{
+       toast.success(response.data.msg, {position:"top-right"})
+       navigate("/")
+    })
+    .catch(error => console.log(error))
+  }
+
+
+  return (
+    <div className='addUser'>
+        <Link to={"/"}>Back</Link>
+        <h3>Add new user</h3>
+        <form className='addUserForm' onSubmit={submitForm}>
+            <div className="inputGroup">
+                <label htmlFor="fname">First name</label>
+                <input type="text" onChange={inputHandler} id="fname" name="fname" autoComplete='off' placeholder='First name' />
+            </div>
+            <div className="inputGroup">
+                <label htmlFor="lname">Last name</label>
+                <input type="text" onChange={inputHandler} id="lname" name="lname" autoComplete='off' placeholder='Last name' />
+            </div>
+            <div className="inputGroup">
+                <label htmlFor="email">Email</label>
+                <input type="email" onChange={inputHandler} id="email" name="email" autoComplete='off' placeholder='Email' />
+            </div>
+            <div className="inputGroup">
+                <label htmlFor="password">Password</label>
+                <input type="password" onChange={inputHandler} id="password" name="password" autoComplete='off' placeholder='password' />
+            </div>
+            <div className="inputGroup">
+                <button type="submit">ADD USER</button>
+            </div>
+        </form>
+    </div>
+  )
+}
+
+export default Add
+    </script>
+    <script class="User">
+        import React, { useEffect, useState } from 'react'
+import axios from "axios";
+import toast from "react-hot-toast";
+import "./user.css";
+import { Link } from 'react-router-dom'
+
+const User = () => {
+
+  const [users, setUsers] = useState([]);
+
+  useEffect(()=>{
+
+    const fetchData = async()=>{
+        const response = await axios.get("http://localhost:8000/api/getall");
+        setUsers(response.data);
+    }
+
+    fetchData();
+
+  },[])
+
+  const deleteUser = async(userId) =>{
+      await axios.delete(`http://localhost:8000/api/delete/${userId}`)
+      .then((respones)=>{
+        setUsers((prevUser)=> prevUser.filter((user)=> user._id !== userId))
+        toast.success(respones.data.msg, {position: 'top-right'})
+      })
+      .catch((error) =>{
+        console.log(error);
+      })
+  }
+
+  return (
+    <div className='userTable'>
+        <Link to={"/add"} className='addButton'>Add User</Link>
+        <table border={1} cellPadding={10} cellSpacing={0}>
+            <thead>
+                <tr>
+                    <th>S.No.</th>
+                    <th>User name</th>
+                    <th>User Email</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {
+                    users.map((user, index)=>{
+                        return(
+                        <tr key={user._id}>
+                            <td>{index + 1}</td>
+                            <td>{user.fname} {user.lname}</td>
+                            <td>{user.email}</td>
+                            <td className='actionButtons'>
+                                <button onClick={()=> deleteUser(user._id)}><i className="fa-solid fa-trash"></i></button>
+                                <Link to={`/edit/`+user._id}><i className="fa-solid fa-pen-to-square"></i></Link>
+                            </td>
+                        </tr>
+                        )
+                    })
+                }
+                
+            </tbody>
+        </table>
+    </div>
+  )
+}
+
+//export default User
+    </script>
+    <script class="edit">
+        import React, { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import axios from "axios";
+import "../adduser/add.css";
+import toast from 'react-hot-toast';
+
+const Edit = () => {
+
+ const users = {
+    fname: "",
+    lname: "",
+    email: ""
+ }
+
+ const {id} = useParams();
+ const navigate = useNavigate();
+ const [user, setUser] = useState(users);
+
+ const inputChangeHandler = (e) =>{
+    const {name, value} = e.target;
+    setUser({...user, [name]:value});
+    console.log(user);
+ }
+
+ useEffect(()=>{
+    axios.get(`http://localhost:8000/api/getone/${id}`)
+    .then((response)=>{
+        setUser(response.data)
+    })
+    .catch((error)=>{
+        console.log(error);
+    })
+ },[id])
+
+
+ const submitForm = async(e)=>{
+    e.preventDefault();
+    await axios.put(`http://localhost:8000/api/update/${id}`, user)
+    .then((response)=>{
+       toast.success(response.data.msg, {position:"top-right"})
+       navigate("/")
+    })
+    .catch(error => console.log(error))
+ }
+
+  return (
+    <div className='addUser'>
+        <Link to={"/"}>Back</Link>
+        <h3>Update user</h3>
+        <form className='addUserForm' onSubmit={submitForm}>
+            <div className="inputGroup">
+                <label htmlFor="fname">First name</label>
+                <input type="text" value={user.fname} onChange={inputChangeHandler} id="fname" name="fname" autoComplete='off' placeholder='First name' />
+            </div>
+            <div className="inputGroup">
+                <label htmlFor="lname">Last name</label>
+                <input type="text" value={user.lname} onChange={inputChangeHandler} id="lname" name="lname" autoComplete='off' placeholder='Last name' />
+            </div>
+            <div className="inputGroup">
+                <label htmlFor="email">Email</label>
+                <input type="email" value={user.email} onChange={inputChangeHandler} id="email" name="email" autoComplete='off' placeholder='Email' />
+            </div>
+            <div className="inputGroup">
+                <button type="submit">UPDATE USER</button>
+            </div>
+        </form>
+    </div>
+  )
+}
+
+//export default Edit
+    </script>
+
+    
+</body>
+
+</html>
